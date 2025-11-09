@@ -2,13 +2,13 @@
 Start Handler - /start 명령어 핸들러
 """
 from aiogram import Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command
 from aiogram.types import Message
 
 router = Router()
 
 
-@router.message(CommandStart())
+@router.message(Command("시작"))
 async def start_handler(message: Message):
     """시작 명령어 핸들러"""
     await message.reply(
