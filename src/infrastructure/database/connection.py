@@ -21,13 +21,21 @@ class DatabaseManager:
             database_url: 데이터베이스 연결 URL
         """
         self.database_url = database_url
-        self.engine = create_async_engine(
-            database_url,
-            echo=settings.debug,
-            pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
-        )
+
+        # SQLite는 pool_size, max_overflow를 지원하지 않음
+        engine_kwargs = {
+            "echo": settings.debug,
+        }
+
+        # PostgreSQL/MySQL 등의 경우에만 connection pool 설정 추가
+        if not database_url.startswith("sqlite"):
+            engine_kwargs.update({
+                "pool_pre_ping": True,
+                "pool_size": 5,
+                "max_overflow": 10,
+            })
+
+        self.engine = create_async_engine(database_url, **engine_kwargs)
         self.session_factory = async_sessionmaker(
             self.engine,
             class_=AsyncSession,
