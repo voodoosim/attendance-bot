@@ -75,11 +75,79 @@ cp .env.example .env
 # DATABASE_URL=sqlite+aiosqlite:///./attendance.db
 ```
 
-### 4. 실행
+### 4. 로컬 실행
 
 ```bash
+# 데이터베이스 마이그레이션
+alembic upgrade head
+
 # 봇 실행
 python main.py
+```
+
+## 🐳 VPS 배포 (Docker)
+
+### 1. 서버 준비
+
+```bash
+# Docker 및 Docker Compose 설치 (Ubuntu)
+sudo apt update
+sudo apt install -y docker.io docker-compose
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 사용자를 docker 그룹에 추가
+sudo usermod -aG docker $USER
+# 로그아웃 후 재로그인 필요
+```
+
+### 2. 프로젝트 배포
+
+```bash
+# 저장소 클론
+git clone https://github.com/voodoosim/attendance-bot.git
+cd attendance-bot
+
+# 환경 변수 설정
+cp .env.example .env
+nano .env  # BOT_TOKEN 입력
+
+# 봇 시작
+./deploy.sh start
+```
+
+### 3. 배포 스크립트 사용법
+
+```bash
+./deploy.sh start    # 봇 시작
+./deploy.sh stop     # 봇 중지
+./deploy.sh restart  # 봇 재시작
+./deploy.sh logs     # 로그 확인
+./deploy.sh status   # 상태 확인
+```
+
+### 4. 환경 변수 설정 (.env)
+
+```bash
+# 필수 설정
+BOT_TOKEN=your_bot_token_here
+DATABASE_URL=postgresql+asyncpg://attendance_user:attendance_pass@postgres:5432/attendance_db
+
+# 선택 설정
+ADMIN_IDS=123456789,987654321
+TIMEZONE=Asia/Seoul
+DEBUG=False
+LOG_LEVEL=INFO
+```
+
+### 5. 데이터 백업
+
+```bash
+# PostgreSQL 데이터 백업
+docker exec attendance-postgres pg_dump -U attendance_user attendance_db > backup.sql
+
+# 데이터 복원
+docker exec -i attendance-postgres psql -U attendance_user attendance_db < backup.sql
 ```
 
 ## 📋 명령어 목록
