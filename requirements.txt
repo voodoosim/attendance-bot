@@ -1,6 +1,6 @@
 # Core dependencies
 aiogram==3.13.1
-aiohttp==3.10.10
+aiohttp==3.12.14
 
 # Database
 sqlalchemy==2.0.36
