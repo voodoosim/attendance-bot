@@ -1,10 +1,10 @@
 """
 ChatActivity Repository - Data access layer for ChatActivity entity
 """
-from datetime import datetime
-from typing import List
+from datetime import datetime, date
+from typing import List, Optional, Tuple
 
-from sqlalchemy import select
+from sqlalchemy import select, func, cast, Date, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.entities.chat_activity import ChatActivity
@@ -57,6 +57,69 @@ class ChatActivityRepository:
         )
         models = result.scalars().all()
         return [self._to_entity(model) for model in models]
+
+    async def get_daily_stats(
+        self, target_date: date
+    ) -> Tuple[int, int, int, int]:
+        """일일 채팅 통계 (메시지 수, 총 점수, 잭팟 횟수, 활동 사용자 수)"""
+        result = await self.session.execute(
+            select(
+                func.count(ChatActivityModel.id),
+                func.sum(ChatActivityModel.final_score),
+                func.count(ChatActivityModel.id).filter(ChatActivityModel.is_jackpot == True),  # noqa: E712
+                func.count(func.distinct(ChatActivityModel.user_id)),
+            ).where(cast(ChatActivityModel.created_at, Date) == target_date)
+        )
+        row = result.one()
+        return (
+            row[0] or 0,  # 메시지 수
+            row[1] or 0,  # 총 점수
+            row[2] or 0,  # 잭팟 횟수
+            row[3] or 0,  # 활동 사용자 수
+        )
+
+    async def get_monthly_stats(
+        self, year: int, month: int
+    ) -> Tuple[int, int, int, int]:
+        """월별 채팅 통계 (메시지 수, 총 점수, 잭팟 횟수, 활동 사용자 수)"""
+        result = await self.session.execute(
+            select(
+                func.count(ChatActivityModel.id),
+                func.sum(ChatActivityModel.final_score),
+                func.count(ChatActivityModel.id).filter(ChatActivityModel.is_jackpot == True),  # noqa: E712
+                func.count(func.distinct(ChatActivityModel.user_id)),
+            ).where(
+                extract("year", ChatActivityModel.created_at) == year,
+                extract("month", ChatActivityModel.created_at) == month,
+            )
+        )
+        row = result.one()
+        return (
+            row[0] or 0,  # 메시지 수
+            row[1] or 0,  # 총 점수
+            row[2] or 0,  # 잭팟 횟수
+            row[3] or 0,  # 활동 사용자 수
+        )
+
+    async def get_most_active_date(
+        self, year: int, month: int
+    ) -> Optional[Tuple[date, int]]:
+        """가장 활발했던 날과 그 날의 메시지 수"""
+        result = await self.session.execute(
+            select(
+                cast(ChatActivityModel.created_at, Date),
+                func.count(ChatActivityModel.id),
+            )
+            .where(
+                extract("year", ChatActivityModel.created_at) == year,
+                extract("month", ChatActivityModel.created_at) == month,
+            )
+            .group_by(cast(ChatActivityModel.created_at, Date))
+            .order_by(func.count(ChatActivityModel.id).desc())
+            .limit(1)
+        )
+        row = result.one_or_none()
+        return row if row else None
 
     def _to_entity(self, model: ChatActivityModel) -> ChatActivity:
         """모델을 엔티티로 변환"""

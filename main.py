@@ -23,11 +23,14 @@ from src.core.use_cases.check_in_usecase import CheckInUseCase
 from src.core.use_cases.process_message_usecase import ProcessMessageUseCase
 from src.core.use_cases.get_user_info_usecase import GetUserInfoUseCase
 from src.core.use_cases.get_ranking_usecase import GetRankingUseCase
+from src.core.use_cases.get_daily_stats_usecase import GetDailyStatsUseCase
+from src.core.use_cases.get_monthly_stats_usecase import GetMonthlyStatsUseCase
 
 # Services
 from src.services.attendance_service import AttendanceService
 from src.services.chat_activity_service import ChatActivityService
 from src.services.user_service import UserService
+from src.services.stats_service import StatsService
 
 # Handlers
 from src.handlers import (
@@ -36,6 +39,7 @@ from src.handlers import (
     message_handler,
     user_info_handler,
     ranking_handler,
+    stats_handler,
 )
 
 
@@ -73,16 +77,24 @@ async def setup_dependencies(dp: Dispatcher):
                 user_repo, attendance_repo, chat_activity_repo
             )
             get_ranking_usecase = GetRankingUseCase(user_repo)
+            daily_stats_usecase = GetDailyStatsUseCase(
+                user_repo, attendance_repo, chat_activity_repo
+            )
+            monthly_stats_usecase = GetMonthlyStatsUseCase(
+                user_repo, attendance_repo, chat_activity_repo
+            )
 
             # Services
             attendance_service = AttendanceService(checkin_usecase)
             chat_activity_service = ChatActivityService(process_message_usecase)
             user_service = UserService(get_user_info_usecase, get_ranking_usecase)
+            stats_service = StatsService(daily_stats_usecase, monthly_stats_usecase)
 
             return {
                 "attendance_service": attendance_service,
                 "chat_activity_service": chat_activity_service,
                 "user_service": user_service,
+                "stats_service": stats_service,
             }
 
     # Store services factory in dispatcher
@@ -96,6 +108,7 @@ def register_handlers(dp: Dispatcher):
     dp.include_router(check_in_handler.router)
     dp.include_router(user_info_handler.router)
     dp.include_router(ranking_handler.router)
+    dp.include_router(stats_handler.router)
     dp.include_router(message_handler.router)  # General message handler last
 
 

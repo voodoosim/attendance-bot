@@ -64,6 +64,29 @@ class AttendanceRepository:
         )
         return len(result.scalars().all())
 
+    async def get_daily_count(self, attendance_date: date) -> int:
+        """특정 날짜의 출석 횟수"""
+        from sqlalchemy import func
+
+        result = await self.session.execute(
+            select(func.count(AttendanceModel.id)).where(
+                AttendanceModel.date == attendance_date
+            )
+        )
+        return result.scalar() or 0
+
+    async def get_monthly_count(self, year: int, month: int) -> int:
+        """특정 월의 총 출석 횟수"""
+        from sqlalchemy import func, extract
+
+        result = await self.session.execute(
+            select(func.count(AttendanceModel.id)).where(
+                extract("year", AttendanceModel.date) == year,
+                extract("month", AttendanceModel.date) == month,
+            )
+        )
+        return result.scalar() or 0
+
     def _to_entity(self, model: AttendanceModel) -> Attendance:
         """모델을 엔티티로 변환"""
         return Attendance(
